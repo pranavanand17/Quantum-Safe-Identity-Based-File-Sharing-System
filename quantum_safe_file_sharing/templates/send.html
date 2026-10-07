@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="panel glass">
+  <h2>Send Secure File</h2>
+  <p class="muted">The file is encrypted with AES-256-GCM. The file key is protected using ML-KEM-768 encapsulation to the recipient's public key, which is looked up from their identity.</p>
+  <form id="send-form" class="send-form">
+    <label>
+      Recipient identity
+      <select name="recipient_id" required>
+        <option value="" disabled selected>Select a recipient</option>
+        {% for user in recipients %}
+        <option value="{{ user.student_id }}">{{ user.student_id }} — {{ user.name }} ({{ user.email }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      File
+      <input type="file" name="file" required>
+    </label>
+    <button class="btn primary" type="submit">Secure &amp; Send</button>
+  </form>
+  <p id="send-error" class="banner error hidden"></p>
+</article>
+
+<div id="pipeline-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-card glass">
+    <p class="kicker">Secure Transmission</p>
+    <ol id="pipeline-steps" class="pipeline">
+      <li data-step="file">FILE</li>
+      <li data-step="aes">AES-256-GCM</li>
+      <li data-step="encrypted">FILE ENCRYPTED</li>
+      <li data-step="mlkem">ML-KEM</li>
+      <li data-step="encapsulated">KEY ENCAPSULATED</li>
+      <li data-step="identity">RECIPIENT IDENTITY VERIFIED</li>
+      <li data-step="package">SECURE PACKAGE CREATED</li>
+    </ol>
+    <p id="pipeline-complete" class="complete hidden">✓ COMPLETE</p>
+    <dl id="pipeline-meta" class="meta hidden"></dl>
+  </div>
+</div>
+{% endblock %}

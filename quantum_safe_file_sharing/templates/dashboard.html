@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card">
+    <p class="kicker">Security Status</p>
+    <h2>Quantum-Safe</h2>
+    <p class="muted">ML-KEM-768 encapsulation · AES-256-GCM files</p>
+  </article>
+  <article class="stat-card">
+    <p class="kicker">Cryptography</p>
+    <h2>ML-KEM + AES-256-GCM</h2>
+    <p class="muted">Envelope encryption with identity-linked keys</p>
+  </article>
+  <article class="stat-card">
+    <p class="kicker">Files Protected</p>
+    <h2>{{ protected_count }}</h2>
+    <p class="muted">Encrypted packages stored locally</p>
+  </article>
+  <article class="stat-card">
+    <p class="kicker">Files Received</p>
+    <h2>{{ received_count }}</h2>
+    <p class="muted">Addressed to {{ g.current_user.student_id }}</p>
+  </article>
+</section>
+
+<section class="split">
+  <article class="panel glass">
+    <h3>Current identity</h3>
+    <dl class="meta">
+      <div><dt>Name</dt><dd>{{ g.current_user.name }}</dd></div>
+      <div><dt>Identity</dt><dd>{{ g.current_user.student_id }}</dd></div>
+      <div><dt>Email</dt><dd>{{ g.current_user.email }}</dd></div>
+      <div><dt>Security status</dt><dd><span class="pill">Protected</span></dd></div>
+    </dl>
+  </article>
+  <article class="panel glass">
+    <h3>Identity directory</h3>
+    <p class="muted">Student ID maps to a user record and that user's ML-KEM public key. ML-KEM itself is not identity-based encryption.</p>
+    <ul class="directory">
+      {% for user in users %}
+      <li>
+        <strong>{{ user.student_id }}</strong>
+        <span>{{ user.name }}</span>
+        <small>{{ user.email }}</small>
+      </li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endblock %}

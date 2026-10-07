@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Quantum-Safe File Vault{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">Q</div>
+        <div>
+          <strong>QS Vault</strong>
+          <span>Identity + PQC</span>
+        </div>
+      </div>
+      <nav>
+        <a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint == 'dashboard.index' %}active{% endif %}">Dashboard</a>
+        <a href="{{ url_for('files.send_page') }}" class="{% if request.endpoint == 'files.send_page' %}active{% endif %}">Send File</a>
+        <a href="{{ url_for('files.received_page') }}" class="{% if request.endpoint == 'files.received_page' %}active{% endif %}">Received Files</a>
+        <a href="{{ url_for('security.security_page') }}" class="{% if request.endpoint == 'security.security_page' %}active{% endif %}">Security</a>
+        <a href="{{ url_for('security.activity_page') }}" class="{% if request.endpoint == 'security.activity_page' %}active{% endif %}">Activity</a>
+        <a href="{{ url_for('security.about_page') }}" class="{% if request.endpoint == 'security.about_page' %}active{% endif %}">About</a>
+      </nav>
+      <div class="sidebar-foot">
+        <p class="muted">Demo Authentication</p>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button class="btn ghost full" type="submit">Sign out</button>
+        </form>
+      </div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1>Quantum-Safe File Vault</h1>
+          <p class="subtitle">Secure identity-based file sharing with post-quantum cryptography</p>
+        </div>
+        {% if g.current_user %}
+        <div class="identity-chip">
+          <span class="status-dot"></span>
+          <div>
+            <strong>{{ g.current_user.name }}</strong>
+            <small>{{ g.current_user.student_id }} · {{ g.current_user.email }}</small>
+          </div>
+        </div>
+        {% endif %}
+      </header>
+      <main class="content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="banner {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

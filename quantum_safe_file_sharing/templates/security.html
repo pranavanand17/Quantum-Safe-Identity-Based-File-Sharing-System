@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel glass">
+  <h2>Cryptographic architecture</h2>
+  <p class="muted">This system uses <strong>identity-based access and key management combined with post-quantum cryptography</strong>. A student identity is mapped to an ML-KEM public key. ML-KEM is a key encapsulation mechanism, not an identity-based encryption algorithm.</p>
+  <div class="arch">
+    <span>USER IDENTITY</span>
+    <span class="arrow">↓</span>
+    <span>PUBLIC KEY</span>
+    <span class="arrow">↓</span>
+    <span>ML-KEM</span>
+    <span class="arrow">↓</span>
+    <span>SHARED SECRET</span>
+    <span class="arrow">↓</span>
+    <span>AES-256-GCM</span>
+    <span class="arrow">↓</span>
+    <span>ENCRYPTED FILE</span>
+  </div>
+</section>
+
+<section class="card-grid">
+  <article class="panel glass">
+    <h3>AES-256-GCM</h3>
+    <p>Purpose: Encrypts the actual file with a random 256-bit key and an authentication tag that detects tampering.</p>
+  </article>
+  <article class="panel glass">
+    <h3>ML-KEM</h3>
+    <p>Purpose: Provides post-quantum key encapsulation so the file-encryption key can be recovered only with the recipient's private key.</p>
+  </article>
+  <article class="panel glass">
+    <h3>Identity Mapping</h3>
+    <p>Purpose: Associates a recipient identity (student ID) with their cryptographic public key in the local directory.</p>
+  </article>
+  <article class="panel glass">
+    <h3>Authenticated Encryption</h3>
+    <p>Purpose: AES-GCM refuses decryption if the ciphertext, nonce, or bound identity metadata has been modified.</p>
+  </article>
+</section>
+
+<section class="split">
+  <article class="panel glass">
+    <h3>Why Post-Quantum?</h3>
+    <p>Sufficiently capable quantum computers could weaken widely used public-key algorithms such as RSA and elliptic-curve Diffie–Hellman. NIST standardized ML-KEM to support migration toward algorithms designed to remain secure against both classical and quantum attackers. This prototype does not claim the system is unhackable or “quantum proof”; it demonstrates a realistic envelope-encryption design using a maintained ML-KEM implementation.</p>
+  </article>
+  <article class="panel glass">
+    <h3>Security Simulation</h3>
+    <p class="muted">Encrypt a file to yourself, then recover it and compare SHA-256 hashes.</p>
+    <form id="simulate-form" class="send-form">
+      <label>
+        Recipient
+        <select name="recipient_id">
+          {% for user in users %}
+          <option value="{{ user.student_id }}" {% if user.student_id == g.current_user.student_id %}selected{% endif %}>
+            {{ user.student_id }} — {{ user.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        File
+        <input type="file" name="file" required>
+      </label>
+      <button class="btn primary" type="submit">Run integrity demo</button>
+    </form>
+    <div id="simulate-result"></div>
+  </article>
+</section>
+{% endblock %}

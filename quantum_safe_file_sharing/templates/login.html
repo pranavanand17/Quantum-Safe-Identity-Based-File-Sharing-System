@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo Sign In · Quantum-Safe File Vault</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-body">
+  <div class="login-wrap">
+    <div class="login-card glass">
+      <p class="kicker">Demo Authentication</p>
+      <h1>Quantum-Safe File Vault</h1>
+      <p class="lede">Sign in as a local demo identity. This is not production authentication — it selects which student identity and ML-KEM key pair you operate as.</p>
+      <p class="muted">Identity-based access and key management combined with post-quantum cryptography.</p>
+      <div class="login-grid">
+        {% for user in users %}
+        <form method="post" action="{{ url_for('auth.login_as', student_id=user.student_id) }}">
+          <button class="user-card" type="submit">
+            <span class="avatar">{{ user.name[0] }}</span>
+            <span>
+              <strong>{{ user.name }}</strong>
+              <small>{{ user.student_id }}</small>
+              <small>{{ user.email }}</small>
+            </span>
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+      <p class="footnote">Student: Pranav Anand · 23MIC0006</p>
+    </div>
+  </div>
+</body>
+</html>

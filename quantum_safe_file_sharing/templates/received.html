@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Received Files</h2>
+  <p class="muted">Only packages addressed to {{ g.current_user.student_id }} are listed. Authorization is enforced on the server.</p>
+  {% if not packages %}
+  <article class="panel glass empty">No encrypted files have been sent to this identity yet.</article>
+  {% else %}
+  <div class="card-grid">
+    {% for pkg in packages %}
+    <article class="file-card glass">
+      <p class="kicker">{{ pkg.original_filename }}</p>
+      <dl class="meta compact">
+        <div><dt>From</dt><dd>{{ pkg.sender_id }}</dd></div>
+        <div><dt>Encryption</dt><dd>ML-KEM + AES-256-GCM</dd></div>
+        <div><dt>Received</dt><dd>{{ pkg.created_at[:10] }}</dd></div>
+        <div><dt>Status</dt><dd><span class="pill">Quantum-Safe</span></dd></div>
+      </dl>
+      <button class="btn primary decrypt-btn" data-id="{{ pkg.id }}">Decrypt &amp; Download</button>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel glass">
+  <h3>Attempt Unauthorized Access</h3>
+  <p class="muted">Educational demonstration only. The backend checks the recipient identity and refuses decryption when it does not match the signed-in user.</p>
+  {% if not unauthorized_targets %}
+  <p class="muted">No packages addressed to other identities are available yet. Send a file from another account first.</p>
+  {% else %}
+  <div class="card-grid">
+    {% for pkg in unauthorized_targets %}
+    <article class="file-card dim">
+      <strong>{{ pkg.original_filename }}</strong>
+      <p class="muted">Authorized recipient: {{ pkg.recipient_id }}</p>
+      <button class="btn danger unauthorized-btn" data-id="{{ pkg.id }}">Attempt Unauthorized Access</button>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<div id="pipeline-modal" class="modal hidden" role="dialog">
+  <div class="modal-card glass">
+    <p class="kicker" id="decrypt-kicker">Decryption Sequence</p>
+    <ol id="decrypt-steps" class="pipeline">
+      <li data-step="identity">RECIPIENT IDENTITY</li>
+      <li data-step="private">PRIVATE KEY LOADED</li>
+      <li data-step="decap">ML-KEM DECAPSULATION</li>
+      <li data-step="key">FILE KEY RECOVERED</li>
+      <li data-step="verify">AES-256-GCM VERIFICATION</li>
+      <li data-step="plain">FILE DECRYPTED</li>
+    </ol>
+    <div id="decrypt-result" class="hidden"></div>
+  </div>
+</div>
+{% endblock %}

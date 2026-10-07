@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Activity</h2>
+  <p class="muted">Security events are recorded without secret keys or file contents.</p>
+  {% if not events %}
+  <article class="panel glass empty">No events yet. Send or decrypt a file to populate this timeline.</article>
+  {% else %}
+  <ol class="timeline">
+    {% for event in events %}
+    <li class="timeline-item glass">
+      <time>{{ event.timestamp.replace('T', ' ')[:19] }} UTC</time>
+      <strong>{{ event.event }}</strong>
+      {% if event.details %}<span>{{ event.details }}</span>{% endif %}
+      {% if event.file_id %}<small>Package {{ event.file_id }}</small>{% endif %}
+      {% if event.user_id %}<small>Identity {{ event.user_id }}</small>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+</section>
+{% endblock %}

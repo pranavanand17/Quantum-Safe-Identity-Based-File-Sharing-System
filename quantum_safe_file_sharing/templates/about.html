@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="panel glass">
+  <h2>About this project</h2>
+  <p>Quantum-Safe Identity-Based File Sharing System is an educational cybersecurity demonstration by <strong>Pranav Anand (23MIC0006)</strong>.</p>
+  <p>It simulates secure file sharing in which a recipient is selected by identity (student ID / email). That identity is resolved to an ML-KEM public key. The file is encrypted with AES-256-GCM, and the file key is protected with ML-KEM-768 encapsulation.</p>
+  <p>The design is <em>identity-based access and key management combined with post-quantum cryptography</em>. It is not a claim that ML-KEM is an identity-based encryption scheme.</p>
+  <ul class="bullets">
+    <li>Local Flask application — files never leave this machine</li>
+    <li>Demo authentication by selecting a student identity</li>
+    <li>Private keys stored as filesystem seeds under <code>data/keys/</code></li>
+    <li>Encrypted packages stored under <code>data/encrypted/</code></li>
+  </ul>
+</article>
+{% endblock %}
