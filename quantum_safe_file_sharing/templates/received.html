@@ -1,49 +1,52 @@
 {% extends "base.html" %}
+{% block title %}Received files · QS Vault{% endblock %}
+{% block page_eyebrow %}WORKSPACE / INCOMING{% endblock %}
+{% block page_title %}Received files{% endblock %}
+{% block page_description %}Packages addressed to your identity, with authorization enforced by the server.{% endblock %}
 {% block content %}
-<section>
-  <h2>Received Files</h2>
-  <p class="muted">Only packages addressed to {{ g.current_user.student_id }} are listed. Authorization is enforced on the server.</p>
+<section class="content-section">
+  <div class="section-heading"><div><h2>Your packages</h2><p class="panel-description">Only packages addressed to {{ g.current_user.student_id }} are listed.</p></div></div>
   {% if not packages %}
-  <article class="panel glass empty">No encrypted files have been sent to this identity yet.</article>
+  <article class="panel empty"><span class="empty-mark" aria-hidden="true">—</span><h3>Nothing here yet</h3><p>No encrypted files have been sent to this identity.</p></article>
   {% else %}
   <div class="card-grid">
     {% for pkg in packages %}
     <article class="file-card glass">
-      <p class="kicker">{{ pkg.original_filename }}</p>
+      <div class="file-card-heading"><div><p class="kicker">ENCRYPTED PACKAGE</p><h3>{{ pkg.original_filename }}</h3></div><span class="file-indicator" aria-hidden="true">FILE</span></div>
       <dl class="meta compact">
         <div><dt>From</dt><dd>{{ pkg.sender_id }}</dd></div>
-        <div><dt>Encryption</dt><dd>ML-KEM + AES-256-GCM</dd></div>
+        <div><dt>Encryption</dt><dd>ML-KEM-768 + AES-256-GCM</dd></div>
         <div><dt>Received</dt><dd>{{ pkg.created_at[:10] }}</dd></div>
-        <div><dt>Status</dt><dd><span class="pill">Quantum-Safe</span></dd></div>
+        <div><dt>Status</dt><dd><span class="pill">Ready to decrypt</span></dd></div>
       </dl>
-      <button class="btn primary decrypt-btn" data-id="{{ pkg.id }}">Decrypt &amp; Download</button>
+      <button class="btn primary decrypt-btn" data-id="{{ pkg.id }}">Decrypt and download <span aria-hidden="true">↓</span></button>
     </article>
     {% endfor %}
   </div>
   {% endif %}
 </section>
 
-<section class="panel glass">
-  <h3>Attempt Unauthorized Access</h3>
+<section class="panel demo-panel">
+  <div class="panel-heading"><div><p class="kicker">ACCESS CONTROL DEMO</p><h2>Authorization check</h2></div><span class="demo-label">EDUCATIONAL</span></div>
   <p class="muted">Educational demonstration only. The backend checks the recipient identity and refuses decryption when it does not match the signed-in user.</p>
   {% if not unauthorized_targets %}
-  <p class="muted">No packages addressed to other identities are available yet. Send a file from another account first.</p>
+  <div class="empty-inline">No packages addressed to other identities are available yet. Send a file from another account first.</div>
   {% else %}
   <div class="card-grid">
     {% for pkg in unauthorized_targets %}
     <article class="file-card dim">
       <strong>{{ pkg.original_filename }}</strong>
       <p class="muted">Authorized recipient: {{ pkg.recipient_id }}</p>
-      <button class="btn danger unauthorized-btn" data-id="{{ pkg.id }}">Attempt Unauthorized Access</button>
+      <button class="btn danger unauthorized-btn" data-id="{{ pkg.id }}">Attempt access check</button>
     </article>
     {% endfor %}
   </div>
   {% endif %}
 </section>
 
-<div id="pipeline-modal" class="modal hidden" role="dialog">
-  <div class="modal-card glass">
-    <p class="kicker" id="decrypt-kicker">Decryption Sequence</p>
+<div id="pipeline-modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="decrypt-kicker" tabindex="-1">
+  <div class="modal-card">
+    <div class="modal-heading"><div><p class="kicker">ACCESS AND RECOVERY</p><h2 id="decrypt-kicker">Decryption sequence</h2></div><button class="icon-button" type="button" data-close-modal aria-label="Close dialog">×</button></div>
     <ol id="decrypt-steps" class="pipeline">
       <li data-step="identity">RECIPIENT IDENTITY</li>
       <li data-step="private">PRIVATE KEY LOADED</li>
@@ -52,7 +55,7 @@
       <li data-step="verify">AES-256-GCM VERIFICATION</li>
       <li data-step="plain">FILE DECRYPTED</li>
     </ol>
-    <div id="decrypt-result" class="hidden"></div>
+    <div id="decrypt-result" class="hidden" aria-live="polite"></div>
   </div>
 </div>
 {% endblock %}

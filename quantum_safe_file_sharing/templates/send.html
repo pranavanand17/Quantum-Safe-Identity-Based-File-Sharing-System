@@ -1,8 +1,15 @@
 {% extends "base.html" %}
+{% block title %}Send a file · QS Vault{% endblock %}
+{% block page_eyebrow %}WORKSPACE / TRANSFER{% endblock %}
+{% block page_title %}Send a file{% endblock %}
+{% block page_description %}Protect a file for a registered recipient identity.{% endblock %}
 {% block content %}
-<article class="panel glass">
-  <h2>Send Secure File</h2>
-  <p class="muted">The file is encrypted with AES-256-GCM. The file key is protected using ML-KEM-768 encapsulation to the recipient's public key, which is looked up from their identity.</p>
+<article class="panel transfer-panel">
+  <div class="panel-heading">
+    <div><p class="kicker">NEW TRANSFER</p><h2>Prepare a secure package</h2></div>
+    <span class="pill">AES-256-GCM · ML-KEM-768</span>
+  </div>
+  <p class="panel-description">The file is encrypted with AES-256-GCM. Its file key is protected using ML-KEM-768 encapsulation to the recipient's public key, looked up from their identity.</p>
   <form id="send-form" class="send-form">
     <label>
       Recipient identity
@@ -15,16 +22,17 @@
     </label>
     <label>
       File
-      <input type="file" name="file" required>
+      <input type="file" name="file" required aria-describedby="upload-help">
+      <small id="upload-help" class="field-help">Files remain on this machine. Maximum upload size: 10 MB.</small>
     </label>
-    <button class="btn primary" type="submit">Secure &amp; Send</button>
+    <button class="btn primary" type="submit">Secure and send <span aria-hidden="true">↗</span></button>
   </form>
-  <p id="send-error" class="banner error hidden"></p>
+  <p id="send-error" class="banner error hidden" role="alert"></p>
 </article>
 
-<div id="pipeline-modal" class="modal hidden" role="dialog" aria-modal="true">
-  <div class="modal-card glass">
-    <p class="kicker">Secure Transmission</p>
+<div id="pipeline-modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="send-modal-title" tabindex="-1">
+  <div class="modal-card">
+    <div class="modal-heading"><div><p class="kicker">SECURE TRANSMISSION</p><h2 id="send-modal-title">Creating package</h2></div><button class="icon-button" type="button" data-close-modal aria-label="Close dialog">×</button></div>
     <ol id="pipeline-steps" class="pipeline">
       <li data-step="file">FILE</li>
       <li data-step="aes">AES-256-GCM</li>
@@ -34,7 +42,7 @@
       <li data-step="identity">RECIPIENT IDENTITY VERIFIED</li>
       <li data-step="package">SECURE PACKAGE CREATED</li>
     </ol>
-    <p id="pipeline-complete" class="complete hidden">✓ COMPLETE</p>
+    <p id="pipeline-complete" class="complete hidden" role="status">Complete</p>
     <dl id="pipeline-meta" class="meta hidden"></dl>
   </div>
 </div>

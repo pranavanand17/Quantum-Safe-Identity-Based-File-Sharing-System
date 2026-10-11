@@ -1,50 +1,173 @@
 {% extends "base.html" %}
-{% block content %}
-<section class="stats-grid">
-  <article class="stat-card">
-    <p class="kicker">Security Status</p>
-    <h2>Quantum-Safe</h2>
-    <p class="muted">ML-KEM-768 encapsulation · AES-256-GCM files</p>
-  </article>
-  <article class="stat-card">
-    <p class="kicker">Cryptography</p>
-    <h2>ML-KEM + AES-256-GCM</h2>
-    <p class="muted">Envelope encryption with identity-linked keys</p>
-  </article>
-  <article class="stat-card">
-    <p class="kicker">Files Protected</p>
-    <h2>{{ protected_count }}</h2>
-    <p class="muted">Encrypted packages stored locally</p>
-  </article>
-  <article class="stat-card">
-    <p class="kicker">Files Received</p>
-    <h2>{{ received_count }}</h2>
-    <p class="muted">Addressed to {{ g.current_user.student_id }}</p>
-  </article>
-</section>
 
-<section class="split">
-  <article class="panel glass">
-    <h3>Current identity</h3>
-    <dl class="meta">
-      <div><dt>Name</dt><dd>{{ g.current_user.name }}</dd></div>
-      <div><dt>Identity</dt><dd>{{ g.current_user.student_id }}</dd></div>
-      <div><dt>Email</dt><dd>{{ g.current_user.email }}</dd></div>
-      <div><dt>Security status</dt><dd><span class="pill">Protected</span></dd></div>
-    </dl>
-  </article>
-  <article class="panel glass">
-    <h3>Identity directory</h3>
-    <p class="muted">Student ID maps to a user record and that user's ML-KEM public key. ML-KEM itself is not identity-based encryption.</p>
-    <ul class="directory">
-      {% for user in users %}
-      <li>
-        <strong>{{ user.student_id }}</strong>
-        <span>{{ user.name }}</span>
-        <small>{{ user.email }}</small>
-      </li>
-      {% endfor %}
-    </ul>
-  </article>
-</section>
+{% block title %}Overview · QS Vault{% endblock %}
+{% block page_eyebrow %}WORKSPACE / OVERVIEW{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block page_description %}A clear view of your identity, protected files, and key directory.{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+
+  <section class="page-intro">
+    <div class="system-indicator">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>Local system available</span>
+    </div>
+  </section>
+
+  <!-- Metrics -->
+  <section class="stats-grid dashboard-stats">
+
+    <article class="stat-card stat-primary">
+      <div class="stat-topline">
+        <span class="kicker">SECURITY STATUS</span>
+      </div>
+
+      <h3 class="stat-value">Quantum-safe<span class="period">.</span></h3>
+
+      <p class="muted">
+        Post-quantum key encapsulation with authenticated encryption.
+      </p>
+
+      <div class="stat-footer">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>ML-KEM-768 active</span>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-topline">
+        <span class="kicker">CRYPTOGRAPHY</span>
+      </div>
+
+      <h3 class="stat-value stat-technical">ML-KEM <span>+</span><br>AES-256-GCM</h3>
+
+      <p class="muted">
+        Envelope encryption using identity-linked recipient keys.
+      </p>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-topline">
+        <span class="kicker">FILES PROTECTED</span>
+      </div>
+
+      <h3 class="stat-value stat-number">{{ protected_count }}</h3>
+
+      <p class="muted">Encrypted file packages stored locally.</p>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-topline">
+        <span class="kicker">FILES RECEIVED</span>
+      </div>
+
+      <h3 class="stat-value stat-number">{{ received_count }}</h3>
+
+      <p class="muted">
+        Files addressed to your identity.
+      </p>
+    </article>
+
+  </section>
+
+  <!-- Identity and directory -->
+  <section class="dashboard-lower">
+
+    <article class="panel identity-panel">
+      <div class="section-heading">
+        <div>
+          <h3>Your identity</h3>
+        </div>
+
+        <span class="pill">
+          <span class="status-dot"></span>
+          Verified session
+        </span>
+      </div>
+
+      <div class="identity-profile">
+        <div class="identity-avatar" aria-hidden="true">
+          {{ g.current_user.name[0] | upper }}
+        </div>
+
+        <div>
+          <h4>{{ g.current_user.name }}</h4>
+          <p class="muted">Registered identity</p>
+        </div>
+      </div>
+
+      <dl class="meta identity-meta">
+        <div>
+          <dt>Student ID</dt>
+          <dd>{{ g.current_user.student_id }}</dd>
+        </div>
+
+        <div>
+          <dt>Email address</dt>
+          <dd>{{ g.current_user.email }}</dd>
+        </div>
+
+        <div>
+          <dt>Key exchange</dt>
+          <dd>ML-KEM-768</dd>
+        </div>
+
+        <div>
+          <dt>File encryption</dt>
+          <dd>AES-256-GCM</dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="panel directory-panel">
+      <div class="section-heading">
+        <div>
+          <h3>Identity directory</h3>
+        </div>
+
+        <span class="directory-count">
+          {{ users | length }} identities
+        </span>
+      </div>
+
+      <p class="panel-description">
+        Registered identities mapped to their corresponding public keys.
+      </p>
+
+      <ul class="directory directory-refined">
+        {% for user in users %}
+        <li class="directory-entry">
+          <div class="directory-avatar" aria-hidden="true">
+            {{ user.name[0] | upper }}
+          </div>
+
+          <div class="directory-person">
+            <strong>{{ user.name }}</strong>
+            <span>{{ user.student_id }}</span>
+          </div>
+
+          <div class="directory-contact">
+            <small>{{ user.email }}</small>
+            <span class="directory-status">
+              <span class="status-dot"></span>
+              Registered
+            </span>
+          </div>
+        </li>
+        {% else %}
+        <li class="directory-empty">
+          No registered identities found.
+        </li>
+        {% endfor %}
+      </ul>
+
+      <p class="technical-note">
+        Identity lookup associates each user with a public key. ML-KEM is a key-encapsulation mechanism, not identity-based encryption.
+      </p>
+    </article>
+
+  </section>
+
+</div>
 {% endblock %}

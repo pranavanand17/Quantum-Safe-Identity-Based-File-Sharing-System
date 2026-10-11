@@ -4,42 +4,57 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Quantum-Safe File Vault{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">Q</div>
-        <div>
+      <a class="brand" href="{{ url_for('dashboard.index') }}" aria-label="QS Vault home">
+        <span class="brand-mark" aria-hidden="true">Q</span>
+        <span class="brand-copy">
           <strong>QS Vault</strong>
-          <span>Identity + PQC</span>
+          <small>SECURE WORKSPACE</small>
+        </span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <div class="nav-section">
+          <span class="nav-label">Workspace</span>
+          <a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint == 'dashboard.index' %}active{% endif %}"><span class="nav-icon" aria-hidden="true">01</span>Overview</a>
+          <a href="{{ url_for('files.send_page') }}" class="{% if request.endpoint == 'files.send_page' %}active{% endif %}"><span class="nav-icon" aria-hidden="true">02</span>Send a file</a>
+          <a href="{{ url_for('files.received_page') }}" class="{% if request.endpoint == 'files.received_page' %}active{% endif %}"><span class="nav-icon" aria-hidden="true">03</span>Received files</a>
         </div>
-      </div>
-      <nav>
-        <a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint == 'dashboard.index' %}active{% endif %}">Dashboard</a>
-        <a href="{{ url_for('files.send_page') }}" class="{% if request.endpoint == 'files.send_page' %}active{% endif %}">Send File</a>
-        <a href="{{ url_for('files.received_page') }}" class="{% if request.endpoint == 'files.received_page' %}active{% endif %}">Received Files</a>
-        <a href="{{ url_for('security.security_page') }}" class="{% if request.endpoint == 'security.security_page' %}active{% endif %}">Security</a>
-        <a href="{{ url_for('security.activity_page') }}" class="{% if request.endpoint == 'security.activity_page' %}active{% endif %}">Activity</a>
-        <a href="{{ url_for('security.about_page') }}" class="{% if request.endpoint == 'security.about_page' %}active{% endif %}">About</a>
+        <div class="nav-section">
+          <span class="nav-label">System</span>
+          <a href="{{ url_for('security.security_page') }}" class="{% if request.endpoint == 'security.security_page' %}active{% endif %}"><span class="nav-icon" aria-hidden="true">04</span>Security</a>
+          <a href="{{ url_for('security.activity_page') }}" class="{% if request.endpoint == 'security.activity_page' %}active{% endif %}"><span class="nav-icon" aria-hidden="true">05</span>Activity</a>
+          <a href="{{ url_for('security.about_page') }}" class="{% if request.endpoint == 'security.about_page' %}active{% endif %}"><span class="nav-icon" aria-hidden="true">06</span>About</a>
+        </div>
       </nav>
       <div class="sidebar-foot">
-        <p class="muted">Demo Authentication</p>
+        {% if g.current_user %}
+        <div class="sidebar-identity">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span><strong>{{ g.current_user.name }}</strong><small>{{ g.current_user.student_id }}</small></span>
+        </div>
         <form method="post" action="{{ url_for('auth.logout') }}">
           <button class="btn ghost full" type="submit">Sign out</button>
         </form>
+        {% endif %}
       </div>
     </aside>
     <div class="main">
       <header class="topbar">
-        <div>
-          <h1>Quantum-Safe File Vault</h1>
-          <p class="subtitle">Secure identity-based file sharing with post-quantum cryptography</p>
+        <div class="page-heading">
+          <p class="eyebrow">{% block page_eyebrow %}QS VAULT / WORKSPACE{% endblock %}</p>
+          <h1>{% block page_title %}Workspace{% endblock %}</h1>
+          <p class="subtitle">{% block page_description %}Identity-based access with post-quantum cryptography.{% endblock %}</p>
         </div>
         {% if g.current_user %}
         <div class="identity-chip">
-          <span class="status-dot"></span>
+          <span class="status-dot" aria-hidden="true"></span>
           <div>
             <strong>{{ g.current_user.name }}</strong>
             <small>{{ g.current_user.student_id }} · {{ g.current_user.email }}</small>
@@ -51,7 +66,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="banner {{ category }}">{{ message }}</div>
+              <div class="banner {{ category }}" role="status">{{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}

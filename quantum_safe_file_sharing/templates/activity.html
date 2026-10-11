@@ -1,19 +1,22 @@
 {% extends "base.html" %}
+{% block title %}Activity · QS Vault{% endblock %}
+{% block page_eyebrow %}SYSTEM / AUDIT TRAIL{% endblock %}
+{% block page_title %}Activity{% endblock %}
+{% block page_description %}A local record of file and identity security events.{% endblock %}
 {% block content %}
-<section>
-  <h2>Activity</h2>
-  <p class="muted">Security events are recorded without secret keys or file contents.</p>
+<section class="content-section">
+  <div class="section-heading"><div><h2>Recent events</h2><p class="panel-description">Events are recorded without secret keys or file contents.</p></div></div>
   {% if not events %}
-  <article class="panel glass empty">No events yet. Send or decrypt a file to populate this timeline.</article>
+  <article class="panel empty"><span class="empty-mark" aria-hidden="true">—</span><h3>No events yet</h3><p>Send or decrypt a file to populate this timeline.</p></article>
   {% else %}
   <ol class="timeline">
     {% for event in events %}
-    <li class="timeline-item glass">
+    <li class="timeline-item">
       <time>{{ event.timestamp.replace('T', ' ')[:19] }} UTC</time>
-      <strong>{{ event.event }}</strong>
-      {% if event.details %}<span>{{ event.details }}</span>{% endif %}
-      {% if event.file_id %}<small>Package {{ event.file_id }}</small>{% endif %}
-      {% if event.user_id %}<small>Identity {{ event.user_id }}</small>{% endif %}
+      <div class="event-copy"><strong>{{ event.event }}</strong>
+      {% if event.details %}<span>{{ event.details }}</span>{% endif %}</div>
+      <div class="event-meta">{% if event.file_id %}<small>Package {{ event.file_id }}</small>{% endif %}
+      {% if event.user_id %}<small>Identity {{ event.user_id }}</small>{% endif %}</div>
     </li>
     {% endfor %}
   </ol>
