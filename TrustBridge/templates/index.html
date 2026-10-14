@@ -1,0 +1,362 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrustBridge | File Transfer</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; background: #101210; color: #f1f3ee;
+            font: 16px system-ui, sans-serif;
+        }
+        main { width: min(760px, 92%); margin: 55px auto; }
+        h1 { letter-spacing: -1.5px; font-size: 38px; margin-bottom: 5px; }
+        p { color: #a7afa5; line-height: 1.6; }
+        .card {
+            background: #191d19; border: 1px solid #303830;
+            border-radius: 16px; padding: 24px; margin: 20px 0;
+        }
+        button, .download {
+            border: 0; border-radius: 9px; padding: 12px 16px;
+            background: #c4f078; color: #141810; font-weight: 700;
+            cursor: pointer; text-decoration: none; display: inline-block;
+            margin: 4px 4px 4px 0;
+        }
+        button:disabled { opacity: .4; cursor: not-allowed; }
+        button.reject { background: #343b34; color: #f1f3ee; }
+        input[type=file] {
+            display: block; margin: 18px 0; max-width: 100%;
+        }
+        #qr {
+            display: none; width: 220px; max-width: 100%;
+            background: white; padding: 10px; border-radius: 12px;
+            margin-top: 20px;
+        }
+        .muted { font-size: 13px; color: #90998e; }
+        .status { color: #c4f078; font-weight: 650; }
+        .item {
+            border-top: 1px solid #303830; padding: 14px 0;
+            overflow-wrap: anywhere;
+        }
+        .item:first-child { border-top: 0; }
+        .error { color: #ff9d9d; }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+<main>
+    <p>TRUSTBRIDGE / SECURE FILE TRANSFER</p>
+    <h1>Move files. Keep control.</h1>
+    <p>Pair your phone, send files in either direction, and let the recipient decide whether to accept them.</p>
+
+    <section class="card">
+        <h2>01 / Pair your phone</h2>
+        <p id="pairStatus" class="status">No device connected.</p>
+        <button id="generate">Generate pairing QR</button>
+        <div><img id="qr" alt="Phone pairing QR code"></div>
+        <p id="countdown" class="muted"></p>
+        <p class="muted">The pairing code expires after two minutes if unused.</p>
+    </section>
+
+    <section class="card" id="sendCard" hidden>
+        <h2>02 / Send to phone</h2>
+        <p>Your paired phone must approve the transfer before downloading.</p>
+        <form id="uploadForm">
+            <input type="file" id="fileInput" required>
+            <button id="sendButton" type="submit">Send transfer request</button>
+        </form>
+        <p id="uploadMessage" role="status"></p>
+    </section>
+
+    <section class="card">
+        <h2>03 / Transfer activity</h2>
+        <p class="muted">Phone uploads require approval here before you can download them.</p>
+        <div id="transferList"><p class="muted">Pair a phone to begin.</p></div>
+    </section>
+</main>
+
+<script>
+let pairingToken = null;
+let expiryTime = 0;
+let pollHandle = null;
+let transferHandle = null;
+let countdownHandle = null;
+
+const $ = id => document.getElementById(id);
+const generateButton = $("generate");
+
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+}
+
+function showMessage(element, message, isError = false) {
+    element.textContent = message;
+    element.className = isError ? "error" : "status";
+}
+
+generateButton.addEventListener("click", async () => {
+    generateButton.disabled = true;
+    showMessage($("pairStatus"), "Generating a new pairing code...");
+
+    if (pollHandle) clearInterval(pollHandle);
+    if (transferHandle) clearInterval(transferHandle);
+    if (countdownHandle) clearInterval(countdownHandle);
+
+    $("sendCard").hidden = true;
+    $("qr").style.display = "none";
+    $("transferList").replaceChildren();
+
+    try {
+        const response = await fetch("/api/pairing", { method: "POST" });
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Could not create pairing code.");
+        }
+
+        pairingToken = data.token;
+        expiryTime = Date.now() + data.expires_in * 1000;
+
+        $("qr").src = data.qr_url + "?t=" + Date.now();
+        $("qr").style.display = "block";
+        $("countdown").textContent = "Waiting for phone confirmation...";
+        showMessage($("pairStatus"), "Waiting for your phone...");
+
+        pollHandle = setInterval(checkPairing, 1500);
+        updateCountdown();
+        countdownHandle = setInterval(updateCountdown, 1000);
+
+    } catch (error) {
+        showMessage($("pairStatus"), error.message, true);
+    } finally {
+        generateButton.disabled = false;
+    }
+});
+
+function updateCountdown() {
+    const remaining = Math.max(
+        0,
+        Math.ceil((expiryTime - Date.now()) / 1000)
+    );
+
+    if (!$("sendCard").hidden) {
+        $("countdown").textContent = "";
+        return;
+    }
+
+    if (remaining > 0 && pairingToken) {
+        $("countdown").textContent = `Expires in ${remaining} seconds`;
+    } else if (pairingToken) {
+        $("countdown").textContent =
+            "Pairing code expired. Generate a new one.";
+
+        if (pollHandle) clearInterval(pollHandle);
+        if (countdownHandle) clearInterval(countdownHandle);
+    }
+}
+
+async function checkPairing() {
+    if (!pairingToken) return;
+
+    try {
+        const response = await fetch(
+            "/api/status/" + encodeURIComponent(pairingToken)
+        );
+        const data = await response.json();
+
+        if (data.status === "paired") {
+            clearInterval(pollHandle);
+            clearInterval(countdownHandle);
+
+            $("qr").style.display = "none";
+            $("countdown").textContent = "";
+            showMessage($("pairStatus"), "Connected to " + data.device_name);
+            $("sendCard").hidden = false;
+            $("fileInput").disabled = false;
+
+            await loadTransfers();
+
+            if (transferHandle) clearInterval(transferHandle);
+            transferHandle = setInterval(loadTransfers, 2500);
+
+        } else if (data.status === "expired") {
+            clearInterval(pollHandle);
+            clearInterval(countdownHandle);
+            showMessage(
+                $("pairStatus"),
+                "Pairing code expired. Generate another.",
+                true
+            );
+        }
+    } catch (_) {
+        // Retry after temporary network failures.
+    }
+}
+
+$("uploadForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const file = $("fileInput").files[0];
+    if (!file || !pairingToken) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+        showMessage($("uploadMessage"), "Maximum file size is 10 MB.", true);
+        return;
+    }
+
+    const form = new FormData();
+    form.append("file", file);
+
+    $("sendButton").disabled = true;
+    showMessage($("uploadMessage"), "Uploading file...");
+
+    try {
+        const response = await fetch(
+            "/api/transfers/" + encodeURIComponent(pairingToken),
+            { method: "POST", body: form }
+        );
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Upload failed.");
+        }
+
+        showMessage(
+            $("uploadMessage"),
+            "Request sent. Waiting for phone approval."
+        );
+
+        $("fileInput").value = "";
+        await loadTransfers();
+
+    } catch (error) {
+        showMessage($("uploadMessage"), error.message, true);
+    } finally {
+        $("sendButton").disabled = false;
+    }
+});
+
+async function decidePhoneTransfer(id, decision) {
+    try {
+        const response = await fetch(
+            "/api/transfers/" + encodeURIComponent(id) + "/decision",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    token: pairingToken,
+                    decision
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Could not update transfer.");
+        }
+
+        await loadTransfers();
+
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function loadTransfers() {
+    if (!pairingToken || $("sendCard").hidden) return;
+
+    try {
+        const response = await fetch(
+            "/api/transfers/" + encodeURIComponent(pairingToken)
+        );
+        const data = await response.json();
+
+        if (!response.ok) return;
+
+        const list = $("transferList");
+        list.replaceChildren();
+
+        if (!data.transfers.length) {
+            const empty = document.createElement("p");
+            empty.className = "muted";
+            empty.textContent = "No transfers yet.";
+            list.appendChild(empty);
+            return;
+        }
+
+        data.transfers.forEach(transfer => {
+            const item = document.createElement("div");
+            item.className = "item";
+
+            const name = document.createElement("strong");
+            name.textContent = transfer.filename;
+
+            const direction = document.createElement("p");
+            direction.className = "muted";
+            direction.textContent =
+                transfer.direction === "phone_to_pc"
+                    ? "From phone to computer"
+                    : "From computer to phone";
+
+            const details = document.createElement("p");
+            details.textContent =
+                formatSize(transfer.size) + " · " +
+                transfer.status.toUpperCase();
+
+            item.append(name, direction, details);
+
+            if (
+                transfer.direction === "phone_to_pc" &&
+                transfer.status === "pending"
+            ) {
+                const approve = document.createElement("button");
+                approve.textContent = "Approve";
+                approve.addEventListener("click", () =>
+                    decidePhoneTransfer(transfer.id, "approved")
+                );
+
+                const reject = document.createElement("button");
+                reject.textContent = "Reject";
+                reject.className = "reject";
+                reject.addEventListener("click", () =>
+                    decidePhoneTransfer(transfer.id, "rejected")
+                );
+
+                item.append(approve, reject);
+
+            } else if (
+                transfer.direction === "phone_to_pc" &&
+                transfer.status === "approved"
+            ) {
+                const download = document.createElement("a");
+                download.className = "download";
+                download.textContent = "Download to computer";
+                download.href =
+                    "/api/transfers/" + encodeURIComponent(transfer.id) +
+                    "/download?token=" + encodeURIComponent(pairingToken);
+
+                item.appendChild(download);
+
+            } else if (transfer.status === "rejected") {
+                const note = document.createElement("p");
+                note.className = "muted";
+                note.textContent = "This transfer was rejected.";
+                item.appendChild(note);
+            }
+
+            list.appendChild(item);
+        });
+
+    } catch (_) {
+        // Retry on the next poll.
+    }
+}
+</script>
+</body>
+</html>
+

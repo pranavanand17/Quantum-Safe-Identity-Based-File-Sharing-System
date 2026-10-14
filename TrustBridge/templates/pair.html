@@ -1,0 +1,320 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TrustBridge | Phone</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; background: #101210; color: #f1f3ee;
+            font: 16px system-ui, sans-serif;
+        }
+        main { width: min(540px, 92%); margin: 35px auto; }
+        h1 { font-size: 32px; letter-spacing: -1px; }
+        p { color: #a7afa5; line-height: 1.6; }
+        .card {
+            background: #191d19; border: 1px solid #303830;
+            border-radius: 16px; padding: 22px; margin: 18px 0;
+        }
+        input {
+            width: 100%; padding: 12px; margin: 12px 0;
+            background: #101210; border: 1px solid #404940;
+            border-radius: 8px; color: white;
+        }
+        input[type=file] { max-width: 100%; }
+        button, .download {
+            display: inline-block; border: 0; border-radius: 8px;
+            padding: 12px 15px; margin: 4px 4px 4px 0;
+            background: #c4f078; color: #141810; font-weight: 700;
+            text-decoration: none; cursor: pointer;
+        }
+        button:disabled { opacity: .4; cursor: not-allowed; }
+        button.reject { background: #343b34; color: #f1f3ee; }
+        .muted { font-size: 13px; color: #90998e; }
+        .status { color: #c4f078; }
+        .error { color: #ff9d9d; }
+        .item {
+            border-top: 1px solid #303830; padding: 16px 0;
+            overflow-wrap: anywhere;
+        }
+        .item:first-child { border-top: 0; }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+<main>
+    <p>TRUSTBRIDGE / CONNECTED DEVICE</p>
+    <h1>Your files, your decision.</h1>
+    <p>Send files to your computer or review incoming files before downloading them.</p>
+
+    {% if expired %}
+    <section class="card">
+        <h2>Pairing link expired</h2>
+        <p>Return to TrustBridge on your computer and generate a new QR code.</p>
+    </section>
+    {% else %}
+    <section class="card" id="pairCard">
+        <h2>Confirm this device</h2>
+        <p>Enter a device name so your computer can identify this phone.</p>
+
+        <form id="pairForm">
+            <input id="deviceName" maxlength="40" value="My phone"
+                   aria-label="Device name" required>
+            <button type="submit" id="pairButton">Confirm pairing</button>
+        </form>
+
+        <p id="pairMessage" role="status"></p>
+    </section>
+
+    <section class="card" id="phoneUploadCard" hidden>
+        <h2>Send to computer</h2>
+        <p>Your computer must approve the transfer before downloading it.</p>
+
+        <form id="phoneUploadForm">
+            <input type="file" id="phoneFileInput" required>
+            <button type="submit" id="phoneSendButton">Send to computer</button>
+        </form>
+
+        <p id="phoneUploadMessage" role="status"></p>
+    </section>
+
+    <section class="card" id="transferCard" hidden>
+        <h2>Incoming transfers</h2>
+        <p class="status">Your phone is paired.</p>
+        <div id="transfers">
+            <p class="muted">Checking for requests...</p>
+        </div>
+    </section>
+
+    <script>
+    const token = {{ token | tojson }};
+    const $ = id => document.getElementById(id);
+    let transferPoll = null;
+
+    function message(text, error = false) {
+        $("pairMessage").textContent = text;
+        $("pairMessage").className = error ? "error" : "status";
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    }
+
+    async function confirmPairing(event) {
+        event.preventDefault();
+        $("pairButton").disabled = true;
+
+        try {
+            const response = await fetch(
+                "/api/pair/" + encodeURIComponent(token),
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        device_name: $("deviceName").value
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Pairing failed.");
+            }
+
+            startDashboard();
+
+        } catch (error) {
+            message(error.message, true);
+            $("pairButton").disabled = false;
+        }
+    }
+
+    function startDashboard() {
+        $("pairCard").hidden = true;
+        $("phoneUploadCard").hidden = false;
+        $("transferCard").hidden = false;
+
+        loadTransfers();
+
+        if (transferPoll) clearInterval(transferPoll);
+        transferPoll = setInterval(loadTransfers, 2000);
+    }
+
+    async function uploadToComputer(event) {
+        event.preventDefault();
+
+        const file = $("phoneFileInput").files[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+            $("phoneUploadMessage").textContent =
+                "Maximum file size is 10 MB.";
+            $("phoneUploadMessage").className = "error";
+            return;
+        }
+
+        const form = new FormData();
+        form.append("file", file);
+
+        $("phoneSendButton").disabled = true;
+        $("phoneUploadMessage").textContent = "Uploading...";
+        $("phoneUploadMessage").className = "status";
+
+        try {
+            const response = await fetch(
+                "/api/phone/upload/" + encodeURIComponent(token),
+                {
+                    method: "POST",
+                    body: form
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Upload failed.");
+            }
+
+            $("phoneUploadMessage").textContent =
+                "Transfer request sent. Waiting for computer approval.";
+
+            $("phoneFileInput").value = "";
+            await loadTransfers();
+
+        } catch (error) {
+            $("phoneUploadMessage").textContent = error.message;
+            $("phoneUploadMessage").className = "error";
+        } finally {
+            $("phoneSendButton").disabled = false;
+        }
+    }
+
+    async function decide(id, decision) {
+        try {
+            const response = await fetch(
+                "/api/transfers/" + encodeURIComponent(id) + "/decision",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token, decision })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Could not update request.");
+            }
+
+            await loadTransfers();
+
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    async function loadTransfers() {
+        try {
+            const response = await fetch(
+                "/api/phone/transfers/" + encodeURIComponent(token)
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                $("transfers").textContent =
+                    data.error || "Could not load transfers.";
+                return;
+            }
+
+            const list = $("transfers");
+            list.replaceChildren();
+
+            if (!data.transfers.length) {
+                const empty = document.createElement("p");
+                empty.className = "muted";
+                empty.textContent = "No incoming files yet.";
+                list.appendChild(empty);
+                return;
+            }
+
+            data.transfers.forEach(transfer => {
+                const item = document.createElement("div");
+                item.className = "item";
+
+                const title = document.createElement("strong");
+                title.textContent = transfer.filename;
+
+                const details = document.createElement("p");
+                details.textContent =
+                    formatSize(transfer.size) + " · " +
+                    transfer.status.toUpperCase();
+
+                item.append(title, details);
+
+                if (transfer.status === "pending") {
+                    const approve = document.createElement("button");
+                    approve.textContent = "Approve";
+                    approve.addEventListener("click", () =>
+                        decide(transfer.id, "approved")
+                    );
+
+                    const reject = document.createElement("button");
+                    reject.textContent = "Reject";
+                    reject.className = "reject";
+                    reject.addEventListener("click", () =>
+                        decide(transfer.id, "rejected")
+                    );
+
+                    item.append(approve, reject);
+
+                } else if (transfer.status === "approved") {
+                    const download = document.createElement("a");
+                    download.className = "download";
+                    download.textContent = "Download file";
+                    download.href =
+                        "/api/transfers/" + encodeURIComponent(transfer.id) +
+                        "/download?token=" + encodeURIComponent(token);
+
+                    item.appendChild(download);
+
+                } else if (transfer.status === "rejected") {
+                    const note = document.createElement("p");
+                    note.className = "muted";
+                    note.textContent = "This transfer was rejected.";
+                    item.appendChild(note);
+                }
+
+                list.appendChild(item);
+            });
+
+        } catch (_) {
+            // Retry automatically on the next poll.
+        }
+    }
+
+    $("pairForm").addEventListener("submit", confirmPairing);
+    $("phoneUploadForm").addEventListener("submit", uploadToComputer);
+
+    // Reopen the paired dashboard if this page is refreshed.
+    fetch("/api/status/" + encodeURIComponent(token))
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "paired") {
+                startDashboard();
+            } else if (data.status === "expired") {
+                message("Pairing link expired.", true);
+            }
+        })
+        .catch(() => {});
+    </script>
+    {% endif %}
+</main>
+</body>
+</html>
+
